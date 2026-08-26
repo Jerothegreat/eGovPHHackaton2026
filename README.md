@@ -130,18 +130,93 @@ The developer console demonstrates:
 - Developer application review from the official/LGU consoles.
 
 ## Integrated eGovPH Services
+### Client Variables
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL used by the browser client. |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase publishable/legacy anon key. This key is not a secret; protect data with RLS and server authorization. |
+
+The client only needs the Supabase URL and anon key as credentials. These optional client-side demo controls may also be placed in `.env`:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_EGOV_SSO_USE_MOCK` | SSO mode. Any value other than the literal `false` enables mock SSO. |
+| `VITE_EREPORT_USE_MOCK` | Enables the local eReport success fallback when set to `true`. |
+| `VITE_EMESSAGE_SMS_RECIPIENTS` | Comma-separated Philippine numbers used as SMS dispatch targets by the demo UI. |
+
+### Supabase Edge Function Secrets
+
+| Variable | Required for | Purpose |
+|---|---|---|
+| `EGOV_SSO_BASE_URL` | Live SSO | eGov SSO host. |
+| `EGOV_SSO_EXCHANGE_CODE_PATH` | Optional live SSO | Exchange-code path; defaults to `/api/exchange-code`. |
+| `EGOV_SSO_PARTNER_CODE` | Live SSO | eGov partner code. |
+| `EGOV_SSO_PARTNER_SECRET` | Live SSO | eGov partner secret. |
+| `EGOV_INTEGRATION_BASE_URL` | OTP | eGov integration API host. |
+| `EGOV_INTEGRATION_ACCESS_CODE` | OTP and AI fallback | eGov integration access code. |
+| `EGOV_AI_BASE_URL` | AI | eGov AI host; defaults to `https://egov-ai-core-ws.oueg.info`. |
+| `EGOV_AI_ACCESS_CODE` | Live AI | eGov AI access code. Falls back to `EGOV_INTEGRATION_ACCESS_CODE`. |
+| `GEMINI_API_KEY` | Gemini fallback | Optional secondary AI provider key. |
+| `EMESSAGE_BASE_URL` | SMS | eMessage host; defaults to `https://ws-message.e.gov.ph`. |
+| `EMESSAGE_ACCESS_TOKEN` | SMS | eGovPH eSMS credential. |
+| `TELEGRAM_BOT_TOKEN` | Telegram | Telegram bot credential. |
+| `TELEGRAM_CHAT_IDS` | Telegram | Optional comma-separated default chat IDs for server-side dispatch. |
+| `EREPORT_BASE_URL` | eReport | eReport host; defaults to `https://stg-ereport-ws.oueg.info`. |
+| `EREPORT_ACCESS_TOKEN` | eReport | eReport access code used to obtain short-lived integration tokens. |
+
+The Edge Function caches short-lived eGov AI, eReport, and integration tokens in its worker process. These caches are not durable and may be recreated at any time.
+
+## eGovPH API Usage
+
+eHANDA does not call provider APIs directly from the browser. Browser requests go to the `egov` Supabase Edge Function, which keeps partner credentials server-side, obtains short-lived provider tokens, calls the selected eGovPH service, and returns only the data needed by the UI.
+
+```text
+Resident / Official / LGU / Developer UI
+              |
+              v
+       Supabase Edge Function: egov
+              |
+              +--> eGov SSO
+              +--> eGov AI
+              +--> eReport
+              +--> eGovPH eSMS
+              +--> Telegram Bot API
+```
+
+The application records whether a response came from a live provider or a fallback. This prevents demo data from being mistaken for a successful national API request.
 
 ### eGov SSO
 
-The authentication layer supports mock demo identities and the eGovPH SSO integration path. The resulting profile supplies role and geographic scope information used by the application.
+The login flow uses the eGovPH SSO exchange sequence when live credentials are configured:
+
+```text
+eGovPH exchange code
+  -> POST /api/token
+  -> POST /api/partner/sso_authentication
+  -> eGovPH profile
+  -> eHANDA role and location routing
+```
+
+The returned profile supplies the user's `uniqid`, role, barangay, municipality, province, region, and PSGC codes. eHANDA uses those values to route users to the correct console and scope official, LGU, and developer data. Mock SSO identities are used by default for the hackathon walkthrough.
 
 ### eGov AI
 
-The eGov AI service powers the citizen assistant, disaster guidance, and translation flows. Local fallback responses are used when the live service is unavailable.
+The Edge Function first exchanges the configured access code for a short-lived eGov AI token, caches that token in memory, and calls the relevant endpoint:
+
+| Endpoint | eHANDA usage | Trigger | Result in the system |
+|---|---|---|---|
+| `POST /api/v1/egov/integration/ai_assistant/generate` | Resident Help & Procedures chat | Resident sends a question | Response and `session_id` are rendered in chat. |
+| `POST /api/v1/egov/integration/translator/generate` | Alert and campaign translation | User selects Filipino translation | Localized warning is shown beside the source text. |
+| `GET /api/v1/egov/integration/credits` | Developer portal balance | Developer portal loads | Remaining live AI credits are shown. |
+
+Assistant requests send a `prompt` and `category: "PH"`. Translation requests send `prompt`, `source_lang`, and `target_lang`. The client receives `source` and `is_live_api` metadata so the UI can distinguish live eGov AI, Gemini fallback, local fallback, and unavailable responses.
+
+When eGov AI is unavailable, the assistant tries Gemini and then curated emergency guidance. Translation tries Gemini and otherwise reports that live translation is unavailable. Fallback responses are not presented as eGovPH responses.
 
 ### eReport API
 
-The eReport service supports the documented integration endpoints:
+eReport powers the resident emergency-report flow and the developer dataset browser. The Edge Function exchanges `EREPORT_ACCESS_TOKEN` for a short-lived integration token, caches it in memory, and proxies the following calls:
 
 ```text
 POST /api/integration/token
@@ -161,7 +236,18 @@ The location hierarchy is:
 region -> province -> municipality/city -> barangay
 ```
 
-The eReport API is intended to provide the complete live dataset. The repository also contains a limited eReport-shaped PSA fallback dataset for offline/demo use. If a live dataset request fails, the service falls back to the bundled data.
+The dependent dataset calls run when the resident or developer selects a location:
+
+```text
+regions
+  -> provinces(region_code)
+  -> municipalities(province_code)
+  -> barangays(municipality_code)
+```
+
+The selected PSGC codes are submitted with the resident's report. This keeps incident routing tied to an official geographic hierarchy instead of free-text location names. The report response supplies a `case_number` and `status`, which eHANDA displays as the resident's tracking reference.
+
+The eReport API is intended to provide the complete live dataset. The repository also contains a limited eReport-shaped PSA fallback dataset for offline/demo use. If a live dataset request fails, the service falls back to bundled data and the client continues to identify the result as demo/fallback data.
 
 The eReport token sequence is:
 
@@ -176,11 +262,69 @@ Report viewing uses a separate `integration_report_view_token` obtained after em
 
 ### eGovPH eSMS
 
-The publish dispatcher calls the eMessage Push SMS endpoint and normalizes Philippine mobile numbers to E.164 format. Configure recipients with `VITE_EMESSAGE_SMS_RECIPIENTS` as a comma-separated list.
+When an official publishes an assessment, the publish dispatcher sends a concise notification through the eMessage Push SMS endpoint. It includes the emergency headline, evacuation instruction, barangay desk contact, and hotlines. It intentionally omits survey questions so the alert remains readable on basic phones. Philippine numbers are normalized to E.164 format before dispatch. Configure recipients with `VITE_EMESSAGE_SMS_RECIPIENTS` as a comma-separated list.
 
 ### Telegram
 
-The browser dispatcher sends dynamic assessment cards to configured Telegram chat IDs. The local bot handles button callbacks, text replies, confirmation summaries, emergency hotlines, and eGov AI fallback responses.
+Publishing also sends a dynamic assessment card to configured Telegram chat IDs. The card contains the verified display area, question list, YES/NO controls, and submit action. `scratch/telegram-bot.mjs` handles callbacks and binds each answer draft to the exact alert message, then sends confirmation summaries and forwards emergency guidance. If live eGov AI is unavailable, the bot uses the same fallback guidance path as the web assistant.
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js and npm
+- A Supabase project, or the [Supabase CLI](https://supabase.com/docs/guides/cli) for local development
+- Git
+
+### Install and Configure
+
+1. Clone the repository and enter the project directory.
+
+   ```bash
+   git clone https://github.com/JeroTheGreat/eGovPHHackaton2026.git
+   cd eGovPHHackaton2026
+   ```
+
+2. Install the dependencies.
+
+   ```bash
+   npm install
+   ```
+
+3. Create the local environment file.
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`. Keep `VITE_EGOV_SSO_USE_MOCK=true` for the default hackathon demo. Add the optional integration values only when testing live services.
+
+   To obtain eGovPH integration credentials, log in to the [eGovPH platform](https://platforms.e.gov.ph/) and use the credentials provided for the required services. Store live credentials in Supabase Edge Function secrets, not in committed files or browser-exposed `VITE_*` variables.
+
+5. If using a local Supabase instance, start it and apply the migrations:
+
+   ```bash
+   supabase start
+   supabase db reset
+   ```
+
+   Use the local API URL and anon key printed by `supabase start` in `.env`.
+
+6. Start the web application.
+
+   ```bash
+   npm run dev
+   ```
+
+   Open the local URL printed by Vite, then sign in with one of the demo accounts shown on the login screen.
+
+7. To test Telegram notifications, configure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_IDS`, then run the bot in a separate terminal:
+
+   ```bash
+   node scratch/telegram-bot.mjs
+   ```
+
+See [Environment Configuration](#environment-configuration) for the complete variable reference and [Verification Commands](#verification-commands) for checks before submitting changes.
 
 ## Environment Configuration
 
@@ -254,12 +398,3 @@ scratch/telegram-bot.mjs                      Local Telegram long-polling bot
 supabase/migrations/                          Database schema and demo seeds
 docs/eReport-API-Documentation.md              eReport integration reference
 ```
-
-## Demo Scope and Limitations
-
-- This is a hackathon/demo build, not a production deployment.
-- The browser dispatcher currently consumes `VITE_*` integration values; production deployments should move provider credentials behind a server-side or Supabase Edge Function boundary.
-- SMS recipients and Telegram chat IDs must be configured for real recipients. The demo may use configured sample targets.
-- The Telegram bot is a local long-polling process and must be restarted after bot code changes.
-- The bundled location data is a fallback subset. The live eReport API should be used when nationwide location coverage is required.
-- Supabase persistence and external API availability depend on environment configuration and service permissions.
