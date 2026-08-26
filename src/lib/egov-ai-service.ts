@@ -136,6 +136,6 @@ export async function getCreditBalance(): Promise<CreditBalanceResponse> {
     credits_total: 200,
     credits_used: 0,
     credits_remaining: 200,
-    is_live_api: true,
+    is_live_api: false,
   }
 }

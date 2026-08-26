@@ -152,10 +152,9 @@ export function DisasterReportForm({
         longitude: "119.9812",
       })
 
-      const caseNum = res.data?.case_number || "HND-REF-8849"
       setResultMessage({
         type: "success",
-        text: `Report logged to eReport pipeline successfully! Case Reference: ${caseNum}`,
+        text: `Report logged to eReport pipeline successfully! Case Reference: ${res.case_number}`,
       })
       setTimeout(() => {
         onClose()

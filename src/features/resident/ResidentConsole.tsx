@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { HandaBottomSheet, type SheetState } from '@/components/HandaBottomSheet'
 import { CitizenHelpChat } from '@/components/CitizenHelpChat'
 import { DisasterReportForm } from '@/components/DisasterReportForm'
+import { EReportHistoryModal } from '@/components/EReportHistoryModal'
 import { useSession } from '@/features/auth/session-context'
 import { getCampaignEReportDefaults } from '@/features/demo/historical-selectors'
 import { translateText } from '@/lib/egov-ai-service'
@@ -74,13 +75,14 @@ function toFilipinoCategory(category: string) {
 }
 
 export function ResidentConsole() {
-  const { session, logout } = useSession()
+  const { session, logout, setReportViewToken } = useSession()
   const { data, loading, submitCheckIn } = useHandaStore()
 
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [sheetState, setSheetState] = useState<SheetState>('mid')
   const [showSurvey, setShowSurvey] = useState(false)
   const [showEReportModal, setShowEReportModal] = useState(false)
+  const [showEReportHistory, setShowEReportHistory] = useState(false)
   const [showSubmissionModal, setShowSubmissionModal] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [translatedCopy, setTranslatedCopy] = useState<Record<string, string> | null>(null)
@@ -289,7 +291,7 @@ export function ResidentConsole() {
             <span>⌂</span>
             <strong>Home</strong>
           </button>
-          <button type="button" className="resident-mobile-nav-item">
+          <button type="button" className="resident-mobile-nav-item" onClick={() => setShowEReportHistory(true)}>
             <span>▣</span>
             <strong>Scan</strong>
           </button>
@@ -420,6 +422,16 @@ export function ResidentConsole() {
           email: profile.email,
         }}
       />
+
+      {showEReportHistory && (
+        <EReportHistoryModal
+          email={profile.email}
+          reportViewToken={session.reportViewToken}
+          reportViewTokenExpiresAt={session.reportViewTokenExpiresAt}
+          onStoreReportViewToken={setReportViewToken}
+          onClose={() => setShowEReportHistory(false)}
+        />
+      )}
 
       {showSubmissionModal && (
         <div className="modal-overlay" onClick={() => setShowSubmissionModal(false)}>

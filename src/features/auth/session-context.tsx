@@ -8,6 +8,8 @@ type Role = "official" | "resident" | "developer" | "lgu"
 interface Session {
   profile: EgovProfile
   role: Role
+  reportViewToken?: string
+  reportViewTokenExpiresAt?: string
 }
 
 interface SessionContextValue {
@@ -16,6 +18,7 @@ interface SessionContextValue {
   isLoading: boolean
   error: string | null
   login: (identity?: DemoIdentity) => Promise<void>
+  setReportViewToken: (token: string, expiresAt?: string) => void
   logout: () => void
 }
 
@@ -65,13 +68,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function setReportViewToken(token: string, expiresAt?: string) {
+    setSession((current) => current && {
+      ...current,
+      reportViewToken: token,
+      reportViewTokenExpiresAt: expiresAt,
+    })
+  }
+
   function logout() {
     setSession(null)
     clearStoredSession()
   }
 
   return (
-    <SessionContext value={{ session, isAuthed: session !== null, isLoading, error, login, logout }}>
+    <SessionContext value={{ session, isAuthed: session !== null, isLoading, error, login, setReportViewToken, logout }}>
       {children}
     </SessionContext>
   )

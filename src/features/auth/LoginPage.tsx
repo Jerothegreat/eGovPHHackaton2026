@@ -98,6 +98,13 @@ export function LoginPage() {
   async function handleSendOTP() {
     setOtpError(null)
     try {
+      // Live eGov SSO performs identity verification; do not gate it behind eReport OTP.
+      if (!USE_MOCK) {
+        setStep("sso")
+        await login()
+        return
+      }
+
       const targetIdentifier =
         mode === "demo"
           ? currentSelectedUser?.email
@@ -137,7 +144,7 @@ export function LoginPage() {
           : emailInput
 
       if (!targetIdentifier) return
-      const verified = await confirmOTP(targetIdentifier, otp)
+      const { verified } = await confirmOTP(targetIdentifier, otp)
       if (!verified) {
         setOtpError("Invalid verification code")
         return
@@ -178,7 +185,9 @@ export function LoginPage() {
             <div className="text-center pb-3 border-b border-slate-200">
               <h2 className="text-base font-bold text-slate-900">Sign in to eHANDA</h2>
               <p className="text-xs text-slate-500 mt-1">
-                {authMethod === "mobile"
+                {!USE_MOCK
+                  ? "Continue with your verified eGovPH account."
+                  : authMethod === "mobile"
                   ? "Enter your registered Philippine mobile number to receive an SMS one-time password."
                   : "Enter your registered email address to receive a verification code."}
               </p>
@@ -191,7 +200,7 @@ export function LoginPage() {
               }}
               className="flex flex-col gap-4"
             >
-              {authMethod === "mobile" ? (
+              {USE_MOCK && (authMethod === "mobile" ? (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Mobile Number
@@ -224,15 +233,23 @@ export function LoginPage() {
                     required
                   />
                 </div>
+              ))}
+
+              {!USE_MOCK && (
+                <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm text-blue-900">
+                  eGovPH will verify your identity and return your profile securely.
+                </p>
               )}
 
               <button
                 type="submit"
-                disabled={isLoading || (authMethod === "mobile" ? !mobileNumber.trim() : !emailInput.trim())}
+                disabled={isLoading || (USE_MOCK && (authMethod === "mobile" ? !mobileNumber.trim() : !emailInput.trim()))}
                 className="w-full py-3 bg-[var(--blue-primary)] hover:bg-[var(--blue-hover)] active:bg-[var(--blue-deep)] text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isLoading
                   ? "Processing..."
+                  : !USE_MOCK
+                  ? "Continue with eGovPH SSO"
                   : authMethod === "mobile"
                   ? "Send SMS One-Time Password"
                   : "Send Email Verification Code"}
@@ -240,7 +257,7 @@ export function LoginPage() {
             </form>
 
             {/* Toggle between Mobile & Email */}
-            <div className="flex items-center justify-between text-xs pt-1">
+            {USE_MOCK && <div className="flex items-center justify-between text-xs pt-1">
               <button
                 type="button"
                 onClick={() => setAuthMethod(authMethod === "mobile" ? "email" : "mobile")}
@@ -248,7 +265,7 @@ export function LoginPage() {
               >
                 {authMethod === "mobile" ? "Sign in using Email Address instead" : "Sign in using Mobile Number instead"}
               </button>
-            </div>
+            </div>}
 
             <div className="relative flex items-center justify-center my-1">
               <div className="border-t border-slate-200 w-full" />

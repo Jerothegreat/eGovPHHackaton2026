@@ -314,7 +314,7 @@ async function requestOtp(email: string): Promise<{ already_verified: boolean }>
   return { already_verified: data.already_verified }
 }
 
-async function confirmOtp(email: string, otp: string): Promise<{ verified: boolean }> {
+async function confirmOtp(email: string, otp: string): Promise<{ verified: boolean; report_view_token?: string; expires_at?: string }> {
   const token = await getIntegrationToken()
   const res = await fetch(`${integrationBaseUrl}/api/integration/verify/confirm`, {
     method: "POST",
@@ -327,8 +327,12 @@ async function confirmOtp(email: string, otp: string): Promise<{ verified: boole
 
   if (!res.ok) throw new Error(`OTP confirmation failed: ${res.status}`)
 
-  const data = await res.json() as { code: number }
-  return { verified: data.code === 200 }
+  const data = await res.json() as { code: number; report_view_token?: string; expires_at?: string }
+  return {
+    verified: data.code === 200,
+    report_view_token: data.report_view_token,
+    expires_at: data.expires_at,
+  }
 }
 
 async function fetchSsoProfile(providedExchangeCode?: string): Promise<EgovProfile> {
@@ -510,7 +514,7 @@ async function credits(): Promise<CreditBalanceResponse> {
 // eMessage SMS handler
 // ---------------------------------------------------------------------------
 
-async function sendSmsEdge(payload: Record<string, unknown>): Promise<{ success: boolean; status: number; error?: string }> {
+async function sendSmsEdge(payload: Record<string, unknown>): Promise<{ success: boolean; status: number; message?: string; error?: string }> {
   const number = requireString(payload.number, "number")
   const message = requireString(payload.message, "message")
 
@@ -528,11 +532,19 @@ async function sendSmsEdge(payload: Record<string, unknown>): Promise<{ success:
       body: JSON.stringify({ number, message }),
     })
 
-    if (response.status === 201) return { success: true, status: 201 }
+    const body = await response.text()
+    if (response.status === 201) {
+      try {
+        const data = body ? JSON.parse(body) as { data?: { message?: string } } : undefined
+        return { success: true, status: 201, message: data?.data?.message }
+      } catch {
+        return { success: true, status: 201 }
+      }
+    }
     return {
       success: false,
       status: response.status,
-      error: `eGov eSMS returned HTTP ${response.status}: ${await response.text()}`,
+      error: `eGov eSMS returned HTTP ${response.status}: ${body}`,
     }
   } catch (err) {
     return {
@@ -605,14 +617,14 @@ async function ereportProxyEdge(payload: Record<string, unknown>): Promise<unkno
   const method = requireString(payload.method, "method")
   const path = requireString(payload.path, "path")
   const body = payload.body
+  const reportViewToken = payload.report_view_token as string | undefined
 
-  const token = await getEreportToken()
   const url = `${ereportBaseUrl}/api/integration${path}`
 
   const res = await fetch(url, {
     method,
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(reportViewToken ? { "X-EReport-View-Token": reportViewToken } : { Authorization: `Bearer ${await getEreportToken()}` }),
       "Content-Type": "application/json",
     },
     ...(body && method !== "GET" ? { body: JSON.stringify(body) } : {}),

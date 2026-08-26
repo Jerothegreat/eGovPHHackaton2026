@@ -1,150 +1,209 @@
-# HANDA: Disaster Aid & Assessment Platform
+# HANDA: Disaster Aid and Assessment Platform
 
-HANDA is an eGovPH-aligned disaster assessment and aid coordination platform for barangay officials, residents, LGUs, and approved developer integrations. It turns incoming disaster alerts into structured RDANA assessments, publishes those assessments to residents, collects household check-ins, and gives response teams a live operational queue.
+HANDA (eHANDA) is an eGovPH-aligned disaster assessment and aid coordination platform for residents, barangay officials, LGUs, and approved integrations. It turns alerts into structured RDANA assessments, collects household check-ins, publishes emergency notifications, and gives response teams an operational queue.
 
-## Current System Flow
+> **Demo status:** This repository is a hackathon/demo build. It is not ready for production use with real resident data, credentials, or emergency operations without the hardening work listed in [Security and Production Hardening](#security-and-production-hardening).
 
-```text
-eGov SSO / demo identity
-        |
-        v
-Role routing: official | resident | LGU | developer
-        |
-        +--> Official creates an assessment
-        |       |
-        |       +--> Adds or copies RDANA questions
-        |       +--> Publishes draft
-        |              |
-        |              +--> eGovPH eSMS notification
-        |              +--> Telegram dynamic survey card
-        |              +--> eGovPH resident assessment becomes active
-        |
-        +--> Resident answers the active assessment
-        |       |
-        |       +--> eHanda check-in saved to Supabase
-        |       +--> Filipino/English presentation support
-        |       +--> eReport emergency-report option
-        |
-        +--> Official reviews the dashboard queue
-                |
-                +--> Filter, sort, and inspect responses
-                +--> Mark cases visited or resolved
-                +--> Add offline/manual entries
-                +--> Export CSV
-```
+## Features
 
-Only one assessment is active for intake at a time. Publishing a new assessment closes the previous active assessment.
+- Role-based demo entry points for officials, residents, LGUs, and developers.
+- RDANA assessment creation, editing, copying, publishing, closing, and archiving.
+- CAP/SMS alert simulation for PAGASA, NDRRMC, and PHIVOLCS-style alerts.
+- Alert pipeline: parse, normalize, resolve PSGC locations, evaluate severity, draft RDANA questions, review, and publish.
+- Resident household check-ins with Filipino and English presentation support.
+- Official response queue with filters, sorting, case status updates, manual entries, and CSV export.
+- eGovPH eSMS and Telegram assessment notifications.
+- eGov AI assistant, translation, and AI-assisted assessment drafting with deterministic fallbacks.
+- eReport complaint submission and location dataset browsing.
+- LGU municipality-scoped summaries and developer API access demonstrations.
 
-## Demo Walkthrough
-
-### 1. Sign In
-
-Use the demo accounts shown on the login screen. The mock eGov SSO flow returns a profile containing the role, barangay code, municipality code, and other location metadata.
-
-### 2. Official Assessment Setup
-
-Officials can:
-
-- Create a draft assessment with a name, disaster type, and disaster date.
-- Add questions mapped to RDANA categories such as shelter, food/water, medical, livelihood, evacuation, and utilities.
-- Edit or remove questions.
-- Copy a question set from another assessment.
-- Review AI-generated assessment drafts.
-- Publish, close, or archive assessments.
-
-### 3. Alert-to-Draft Pipeline
-
-The dashboard includes a development alert simulator for PAGASA, NDRRMC, and PHIVOLCS-style CAP/SMS alerts.
-
-The simulated Layer 1 pipeline is:
+## Architecture and Request Flow
 
 ```text
-CAP/SMS payload
-  -> CAP parsing
-  -> event normalization
-  -> PSGC location extraction
-  -> severity threshold evaluation
-  -> RDANA question drafting
-  -> official review
-  -> publish
+React/Vite browser
+       |
+       +--> Supabase Data API (campaigns, questions, check-ins, alerts)
+       |
+       +--> Supabase Edge Function: egov
+                    |
+                    +--> eGov SSO
+                    +--> eGov AI, then Gemini fallback
+                    +--> eGovPH eSMS
+                    +--> Telegram Bot API
+                    +--> eReport integration API
 ```
 
-The drafting service uses eGov AI/Gemini when configured and deterministic RDANA templates as an offline fallback.
+The browser invokes the `egov` Edge Function for provider calls. Provider credentials are intended to remain in Edge Function secrets. The browser only needs the Supabase URL and publishable/anonymous key.
 
-### 4. Publish and Notify
+Only one campaign can be `active` for intake. Publishing a new campaign closes the previous active campaign.
 
-Publishing an assessment updates its status to `active` and dispatches the current question set through the configured channels:
+## Prerequisites
 
-- **eGovPH eSMS:** Sends a concise emergency alert, evacuation instruction, barangay desk contact, and emergency hotlines. Survey questions are intentionally omitted from SMS so the message remains usable on constrained devices.
-- **Telegram:** Sends the assessment title, verified display area, evacuation/offline-aid instruction, dynamic question list, YES/NO buttons, and a submit button.
-- **eGovPH resident flow:** Residents see the active assessment in the resident console.
+- Node.js 20.19+ or 22.12+.
+- npm 10+.
+- A Supabase project for persistence and Edge Function integrations. The UI can start in mock mode without one, but database-backed features require Supabase.
+- Supabase CLI only when running migrations or deploying/serving the `egov` Edge Function.
 
-Location display uses verified dataset names instead of raw PSGC codes. Unknown barangay names are not fabricated or displayed as numeric codes. If only a city or region is verified, the notification displays only that verified level.
+## Quick Start: Mock Demo
 
-### 5. Telegram Check-In Behavior
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
 
-The local Telegram bot runs through long polling in `scratch/telegram-bot.mjs`.
+Open the URL printed by Vite, normally `http://localhost:5173`. Mock SSO is enabled unless `VITE_EGOV_SSO_USE_MOCK=false`; use the demo identities shown on the login screen.
 
-Each Telegram answer draft is bound to the exact alert message being answered. This prevents a previous campaign from being mixed with a newer campaign when the same user receives multiple alerts. Confirmation uses:
+Mock mode is useful for reviewing the UI and local fallback behavior. It does not provide real eGov identity verification or provider delivery.
 
-- The questions from the clicked alert message.
-- The campaign title from the clicked alert message.
-- The area from the clicked alert message.
+## Supabase Setup
 
-The completed draft is cleared after confirmation.
+1. Create or select a Supabase project.
+2. Copy the project URL and publishable/anonymous key into `.env`:
 
-### 6. Resident Reporting
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+   ```
 
-Residents can:
+3. Apply the checked-in migrations using the Supabase dashboard or CLI:
 
-- See the active barangay assessment.
-- Answer its dynamic question set.
-- Submit a household check-in.
-- Receive a submission confirmation.
-- View Filipino translations for supported campaign and question text.
-- Open the eReport submission flow for an individual emergency concern.
-- Use the eGov AI assistant for disaster guidance and translation support.
+   ```bash
+   supabase link --project-ref your-project-ref
+   supabase db push
+   ```
 
-### 7. Official Operations Dashboard
+4. Deploy the Edge Function:
 
-The official dashboard provides:
+   ```bash
+   supabase functions deploy egov
+   ```
 
-- Total check-ins and unresolved cases.
-- Need-category aggregation.
-- Sortable and filterable response queue.
-- Individual case detail and answer inspection.
-- Case status updates: unresolved, visited, resolved.
-- Manual resident entry for offline field collection.
-- CSV export with anonymized resident identity, needs, status, submitter, and timestamp.
+5. Add the server-side secrets described below. Do not put these values in `.env` with a `VITE_` prefix when they are intended for the Edge Function.
 
-### 8. LGU and Developer Views
+   ```bash
+   supabase secrets set --project-ref your-project-ref \
+     EGOV_SSO_BASE_URL=... \
+     EGOV_SSO_PARTNER_CODE=... \
+     EGOV_SSO_PARTNER_SECRET=... \
+     EGOV_INTEGRATION_BASE_URL=... \
+     EGOV_INTEGRATION_ACCESS_CODE=... \
+     EGOV_AI_ACCESS_CODE=... \
+     EREPORT_ACCESS_TOKEN=... \
+     EREPORT_BASE_URL=https://stg-ereport-ws.oueg.info \
+     EMESSAGE_ACCESS_TOKEN=... \
+     TELEGRAM_BOT_TOKEN=...
+   ```
 
-The LGU dashboard provides city/municipality-scoped incident summaries, child-barangay activity, response metrics, priority supplies, and developer access requests.
+Use `supabase secrets list` to verify names, not values. After changing secrets, invoke the function again; a redeploy is normally not required.
 
-The developer console demonstrates:
+### Local Supabase
 
-- Barangay-scoped API access.
-- API key and endpoint documentation.
-- eReport dataset browsing.
-- eGov AI and integration status panels.
-- Developer application review from the official/LGU consoles.
+With Docker and the Supabase CLI installed:
 
-## Integrated eGovPH Services
+```bash
+supabase start
+supabase db reset
+supabase functions serve egov
+```
+
+The local function needs its server secrets supplied through the CLI's function environment/secrets mechanism. Keep local secret files outside version control. The repository's `supabase/config.toml` defines the local database, Studio, Auth, Realtime, Storage, and Edge Runtime defaults.
+
+## Environment Variables
+
+Copy `.env.example` to `.env`. Vite exposes only variables prefixed with `VITE_` to browser code. All other provider credentials belong in Supabase Edge Function secrets.
+
+### Browser Variables
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `VITE_EGOV_SSO_USE_MOCK` | No | SSO mode. Any value other than the literal `false` enables mock SSO. Use `false` for live SSO. |
+| `VITE_EREPORT_USE_MOCK` | No | Enables the local eReport success fallback only when set to `true`. Keep `false` for live eReport. |
+| `VITE_SUPABASE_URL` | For persistence | Supabase project URL used by the browser client. |
+| `VITE_SUPABASE_ANON_KEY` | For persistence | Supabase publishable/legacy anon key. This key is not a secret; protect data with RLS and server authorization. |
+| `VITE_EMESSAGE_SMS_RECIPIENTS` | No | Comma-separated Philippine numbers used as SMS dispatch targets by the demo UI. |
+
+### Edge Function Secrets
+
+| Variable | Required for | Purpose |
+|---|---|---|
+| `EGOV_SSO_BASE_URL` | Live SSO | eGov SSO host. |
+| `EGOV_SSO_EXCHANGE_CODE_PATH` | Optional live SSO | Exchange-code path; defaults to `/api/exchange-code`. |
+| `EGOV_SSO_PARTNER_CODE` | Live SSO | eGov partner code. |
+| `EGOV_SSO_PARTNER_SECRET` | Live SSO | eGov partner secret. |
+| `EGOV_INTEGRATION_BASE_URL` | OTP | eGov integration API host. |
+| `EGOV_INTEGRATION_ACCESS_CODE` | OTP and AI fallback | eGov integration access code. |
+| `EGOV_AI_BASE_URL` | AI | eGov AI host; defaults to `https://egov-ai-core-ws.oueg.info`. |
+| `EGOV_AI_ACCESS_CODE` | Live AI | eGov AI access code. Falls back to `EGOV_INTEGRATION_ACCESS_CODE`. |
+| `GEMINI_API_KEY` | Gemini fallback | Optional secondary AI provider key. |
+| `EMESSAGE_BASE_URL` | SMS | eMessage host; defaults to `https://ws-message.e.gov.ph`. |
+| `EMESSAGE_ACCESS_TOKEN` | SMS | eGovPH eSMS credential. |
+| `TELEGRAM_BOT_TOKEN` | Telegram | Telegram bot credential. |
+| `TELEGRAM_CHAT_IDS` | Telegram | Optional comma-separated default chat IDs for server-side dispatch. |
+| `EREPORT_BASE_URL` | eReport | eReport host; defaults to `https://stg-ereport-ws.oueg.info`. |
+| `EREPORT_ACCESS_TOKEN` | eReport | eReport access code used to obtain short-lived integration tokens. |
+
+The Edge Function caches short-lived eGov AI, eReport, and integration tokens in its worker process. These caches are not durable and may be recreated at any time.
+
+## eGovPH API Usage
 
 ### eGov SSO
 
-The authentication layer supports mock demo identities and the eGovPH SSO integration path. The resulting profile supplies role and geographic scope information used by the application.
+With live SSO, the browser sends an `sso-profile` action to the `egov` Edge Function. The function performs the server-side exchange-code and token flow:
+
+```text
+exchange_code
+  -> POST {EGOV_SSO_BASE_URL}/api/token
+  -> POST {EGOV_SSO_BASE_URL}/api/partner/sso_authentication
+  -> role and PSGC-scoped eGov profile
+```
+
+The profile's role and location metadata determine the console and data scope. In mock mode, `src/features/auth/egov-sso.ts` returns fixed demo profiles instead.
 
 ### eGov AI
 
-The eGov AI service powers the citizen assistant, disaster guidance, and translation flows. Local fallback responses are used when the live service is unavailable.
+The browser invokes `egov` with `translate`, `assistant`, or `credits` actions. The function obtains an eGov AI token and calls:
 
-### eReport API
+```text
+POST {EGOV_AI_BASE_URL}/api/v1/egov/integration/token
+POST {EGOV_AI_BASE_URL}/api/v1/egov/integration/translator/generate
+POST {EGOV_AI_BASE_URL}/api/v1/egov/integration/ai_assistant/generate
+GET  {EGOV_AI_BASE_URL}/api/v1/egov/integration/credits
+```
 
-The eReport service supports the documented integration endpoints:
+If live AI fails, translation tries Gemini and then returns an unavailable response; the assistant tries Gemini and then deterministic local emergency guidance. UI responses identify their source as live, Gemini, local fallback, or unavailable.
+
+### eGovPH eSMS
+
+When an official publishes an assessment, the browser invokes `send-sms` through the Edge Function. The function calls:
+
+```text
+POST {EMESSAGE_BASE_URL}/messaging/v1/sms/push
+```
+
+The request uses `X-EMESSAGE-Auth` and normalizes Philippine mobile numbers to E.164 format. SMS contains the alert, verified location, barangay desk, and hotlines; dynamic survey questions are sent through Telegram and the resident web flow instead.
+
+### Telegram
+
+Publishing also invokes `send-telegram` through the Edge Function, which calls the Telegram Bot API `sendMessage` endpoint with an inline keyboard. The local long-polling bot in `scratch/telegram-bot.mjs` handles callbacks, text replies, confirmation, hotlines, and AI fallback responses.
+
+Run the bot separately when needed:
+
+```bash
+TELEGRAM_BOT_TOKEN=your-bot-token node scratch/telegram-bot.mjs
+```
+
+The bot binds an answer draft to the exact alert message, preventing answers from one campaign being submitted to another.
+
+### eReport
+
+The browser never calls eReport directly. `src/lib/ereport-service.ts` invokes the `egov` Edge Function with `ereport-proxy`; the function obtains and caches an eReport integration token, then proxies the request to `{EREPORT_BASE_URL}/api/integration`.
+
+Used endpoints:
 
 ```text
 POST /api/integration/token
+GET  /api/integration/datasets/report_types
 GET  /api/integration/datasets/regions
 GET  /api/integration/datasets/provinces?region_code={code}
 GET  /api/integration/datasets/municipalities?province_code={code}
@@ -155,111 +214,91 @@ POST /api/integration/verify/confirm
 GET  /api/integration/reports
 ```
 
-The location hierarchy is:
+The resident eReport form submits complaint fields and PSGC location codes. Dataset failures use the bundled limited PSA-shaped fallback data. Report viewing requires a separate OTP-derived view token in the upstream API. See the complete request and response reference in [`docs/eReport-API-Documentation.md`](docs/eReport-API-Documentation.md).
 
-```text
-region -> province -> municipality/city -> barangay
-```
+## Database and Data Model
 
-The eReport API is intended to provide the complete live dataset. The repository also contains a limited eReport-shaped PSA fallback dataset for offline/demo use. If a live dataset request fails, the service falls back to the bundled data.
+Checked-in migrations create and seed:
 
-The eReport token sequence is:
+- `campaigns`: assessment metadata and status (`draft`, `active`, `closed`, `archived`).
+- `campaign_questions`: RDANA questions attached to a campaign.
+- `check_ins`: household submissions and operational status (`unresolved`, `visited`, `resolved`).
+- `check_in_answers`: answers attached to a check-in and question.
+- `alerts`: normalized alert events.
+- `barangays`, `officials`, `developers`, and `api_keys`: demo scope and integration data.
 
-```text
-access_code
-  -> POST /api/integration/token
-  -> integration_token
-  -> dataset and complaint requests
-```
+The historical demo seed contains synthetic data. A fresh database may be populated by migrations and, when empty, by the client-side historical demo seed path.
 
-Report viewing uses a separate `integration_report_view_token` obtained after email OTP verification.
-
-### eGovPH eSMS
-
-The publish dispatcher calls the eMessage Push SMS endpoint and normalizes Philippine mobile numbers to E.164 format. Configure recipients with `VITE_EMESSAGE_SMS_RECIPIENTS` as a comma-separated list.
-
-### Telegram
-
-The browser dispatcher sends dynamic assessment cards to configured Telegram chat IDs. The local bot handles button callbacks, text replies, confirmation summaries, emergency hotlines, and eGov AI fallback responses.
-
-## Environment Configuration
-
-Copy `.env.example` to `.env` and configure only the integrations required for the demo.
-
-```env
-# Supabase
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-
-# eGov SSO demo/live settings
-VITE_EGOV_SSO_USE_MOCK=true
-
-# eReport
-VITE_EREPORT_BASE_URL=https://stg-ereport-ws.oueg.info
-VITE_EREPORT_ACCESS_TOKEN=
-VITE_EGOV_INTEGRATION_ACCESS_CODE=
-
-# eGovPH eSMS
-VITE_EMESSAGE_INTEGRATION_BASE_URL=https://ws-message.e.gov.ph
-VITE_EMESSAGE_ACCESS_TOKEN=
-VITE_EMESSAGE_SMS_RECIPIENTS=
-
-# Telegram
-VITE_TELEGRAM_BOT_TOKEN=
-VITE_TELEGRAM_CHAT_IDS=
-```
-
-In the current code, `VITE_EREPORT_ACCESS_TOKEN` is the legacy variable name used as the eReport access code. `VITE_EGOV_INTEGRATION_ACCESS_CODE` is used as its fallback. Do not commit real credentials.
-
-## Local Development
-
-Install dependencies and run the web application:
+## Verification
 
 ```bash
-npm install
-npm run dev
+npm run build       # TypeScript build and Vite production build
+npm run test:unit   # Vitest tests
+npm run lint        # ESLint
+npm test            # CSS variable consistency check
+npm run preview     # Serve the production build locally
 ```
 
-Run the Telegram bot separately:
+## Dependencies
 
-```powershell
-$env:TELEGRAM_BOT_TOKEN="your-bot-token"
-node scratch/telegram-bot.mjs
-```
+Runtime dependencies:
 
-The Vite development proxy maps `/api/ereport` to the configured eReport integration server so dataset requests can be tested without duplicating the `/api/integration` path.
+- `react`, `react-dom`: UI runtime.
+- `@supabase/supabase-js`: Supabase database and Edge Function client.
+- `@base-ui/react`, `shadcn`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`: UI primitives and class composition.
+- `@phosphor-icons/react`: icons.
+- `tailwindcss`, `@tailwindcss/vite`: styling and Vite integration.
+- `@fontsource-variable/jetbrains-mono`: bundled interface font.
 
-## Verification Commands
+Development dependencies:
 
-```bash
-npm run build
-npm run test:unit
-npm run lint
-```
+- `vite`, `@vitejs/plugin-react`: development server and production bundling.
+- `typescript`: type checking.
+- `vitest`: unit tests.
+- `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `@eslint/js`, `globals`: linting.
+- `babel-plugin-react-compiler`, `@rolldown/plugin-babel`, `@babel/core`: React compiler/build support.
+- `@types/node`, `@types/react`, `@types/react-dom`, `@types/babel__core`: TypeScript declarations.
 
-The repository also contains focused tests for alert payload formatting, PSA location resolution, and Telegram message-bound state handling.
+Exact versions are pinned by `package-lock.json`; install with `npm install` rather than adding a second package manager lockfile.
+
+## Security and Production Hardening
+
+Current demo risks that must be addressed before production:
+
+- The historical demo migration explicitly disables RLS on public demo tables so the browser can read and write them. Re-enable RLS and add role- and PSGC-scoped policies before storing real data.
+- The `egov` Edge Function accepts action names from the browser and currently uses permissive `Access-Control-Allow-Origin: *`. Add authenticated user checks, action-level authorization, input limits, rate limits, and an allowlisted production origin.
+- A Supabase anon/publishable key is safe to expose only when RLS and server-side authorization are correct. Never expose a `service_role` key in browser code.
+- Never use `VITE_` for provider secrets. Vite embeds `VITE_*` values in the browser bundle. Keep SSO partner secrets, eReport access codes, eMessage tokens, Telegram bot tokens, Gemini keys, and similar credentials in Edge Function secrets or a server-side secret manager.
+- Do not commit `.env`, provider tokens, OTPs, resident exports, or real incident data. `.env*` is ignored except `.env.example`; verify `git diff` before committing.
+- Validate and constrain complaint text, evidence URLs, PSGC codes, phone numbers, chat IDs, and AI prompts at the Edge Function boundary. Avoid logging personal data, tokens, full complaint bodies, or precise coordinates.
+- Treat AI output as assistance, not an authoritative emergency instruction. Preserve human review for assessment drafts and direct life-threatening cases to official emergency channels.
+- Restrict report viewing to the intended municipality/barangay and verified requester. OTP and report-view tokens should be short-lived, never stored in local storage, and never included in logs or URLs.
+- Replace demo identities, hardcoded Telegram defaults, fallback success responses, synthetic seeds, and development alert simulators before deployment.
+- Use HTTPS, dependency updates, secret rotation, backups, audit logging, monitoring, and a documented incident-response process in the deployment environment.
 
 ## Repository Structure
 
 ```text
-src/features/official/OfficialConsole.tsx    Official assessment and operations console
-src/features/resident/ResidentConsole.tsx     Resident check-in experience
-src/features/lgu/LguDashboard.tsx             LGU command-center view
-src/features/alerts/                          Alert parsing and AI draft pipeline
-src/lib/alert-dispatcher.ts                   eSMS and Telegram publish dispatch
-src/lib/emessage-sms-service.ts               eGovPH eSMS client and formatting
-src/lib/ereport-service.ts                    eReport API and dataset service
-src/lib/psa-fallback-data.ts                  Bundled location fallback dataset
-scratch/telegram-bot.mjs                      Local Telegram long-polling bot
-supabase/migrations/                          Database schema and demo seeds
-docs/eReport-API-Documentation.md              eReport integration reference
+src/features/auth/                 SSO, mock identities, roles, and protected routes
+src/features/alerts/               CAP/SMS parsing, thresholds, RDANA drafting, simulator
+src/features/official/             Official assessment and operations console
+src/features/resident/             Resident check-in and eReport experience
+src/features/lgu/                  LGU municipality-scoped dashboard
+src/features/developer/            Developer console and API catalog UI
+src/lib/ereport-service.ts         eReport proxy client and PSA fallback behavior
+src/lib/egov-ai-service.ts         eGov AI client and local fallback behavior
+src/lib/emessage-sms-service.ts    SMS formatting and Edge Function client
+src/lib/alert-dispatcher.ts        SMS and Telegram publish dispatch
+supabase/functions/egov/            Server-side provider proxy and token handling
+supabase/migrations/                Database schema and demo seed migrations
+scratch/telegram-bot.mjs            Optional local Telegram long-polling bot
+docs/eReport-API-Documentation.md  Complete eReport endpoint reference
 ```
 
-## Demo Scope and Limitations
+## Demo Limitations
 
-- This is a hackathon/demo build, not a production deployment.
-- The browser dispatcher currently consumes `VITE_*` integration values; production deployments should move provider credentials behind a server-side or Supabase Edge Function boundary.
-- SMS recipients and Telegram chat IDs must be configured for real recipients. The demo may use configured sample targets.
-- The Telegram bot is a local long-polling process and must be restarted after bot code changes.
-- The bundled location data is a fallback subset. The live eReport API should be used when nationwide location coverage is required.
-- Supabase persistence and external API availability depend on environment configuration and service permissions.
+- This is a demonstration, not an emergency dispatch or case-management system.
+- External API availability, permissions, quotas, and data coverage depend on the configured providers.
+- eReport fallback data is limited and must not be treated as a nationwide authoritative dataset.
+- The local Telegram bot must be restarted after code changes and is not a production worker.
+- SMS, Telegram, AI, SSO, and eReport failures may use local/demo fallbacks; always inspect the response source and delivery result before treating an operation as completed.

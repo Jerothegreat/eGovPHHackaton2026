@@ -20,15 +20,21 @@ export async function requestOTP(email: string): Promise<{ already_verified: boo
   return data as { already_verified: boolean }
 }
 
-export async function confirmOTP(email: string, otp: string): Promise<boolean> {
+export interface OtpConfirmation {
+  verified: boolean
+  report_view_token?: string
+  expires_at?: string
+}
+
+export async function confirmOTP(email: string, otp: string): Promise<OtpConfirmation> {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 400))
-    return otp === "123456"
+    return { verified: otp === "123456" }
   }
 
   const { data, error } = await requireSupabase().functions.invoke("egov", {
     body: { action: "confirm-otp", payload: { email, otp } },
   })
   if (error) throw error
-  return Boolean((data as { verified?: boolean } | null)?.verified)
+  return data as OtpConfirmation
 }

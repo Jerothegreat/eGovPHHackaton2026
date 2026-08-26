@@ -8,6 +8,7 @@ export type DynamicQuestionItem = {
 export type SmsPushResult = {
   success: boolean
   status: number
+  message?: string
   error?: string
 }
 
@@ -51,10 +52,11 @@ export async function sendSms(number: string, message: string): Promise<SmsPushR
       return { success: false, status: 0, error: error.message ?? 'Edge Function error' }
     }
 
-    const result = data as { success?: boolean; status?: number; error?: string }
+    const result = data as { success?: boolean; status?: number; message?: string; error?: string }
     return {
       success: result.success ?? false,
       status: result.status ?? 0,
+      message: result.message,
       error: result.error,
     }
   } catch (err) {

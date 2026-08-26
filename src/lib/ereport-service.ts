@@ -41,15 +41,32 @@ export interface SubmitComplaintPayload {
 }
 
 export interface SubmitComplaintResponse {
-  code?: number
+  code: number
   message?: string
-  data?: {
-    case_number: string
-    id: string
-    status: string
-  }
+  case_number: string
   is_live_api?: boolean
 }
+
+export interface EReport {
+  id: string
+  case_number: string
+  report_type: { id: string; code: string; name: string }
+  subject: string
+  message: string
+  status: string
+  formatted_status: string
+  created_at: string
+  history: { status: string; formatted_status: string; remarks: string | null; created_at: string }[]
+}
+
+export interface ReportsPage {
+  reports: EReport[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+const USE_MOCK = import.meta.env.VITE_EREPORT_USE_MOCK === "true"
 
 /**
  * Proxy an eReport API call through the Edge Function.
@@ -58,11 +75,12 @@ async function ereportProxy<T>(
   method: string,
   path: string,
   body?: unknown,
+  reportViewToken?: string,
 ): Promise<T | null> {
   if (!supabase) return null
   try {
     const { data, error } = await supabase.functions.invoke("egov", {
-      body: { action: "ereport-proxy", payload: { method, path, body } },
+      body: { action: "ereport-proxy", payload: { method, path, body, report_view_token: reportViewToken } },
     })
     if (error) {
       console.warn(`[eReport] Edge function error for ${path}:`, error.message)
@@ -79,7 +97,6 @@ async function ereportProxy<T>(
  * Fetch report types dataset
  */
 export async function getReportTypes(): Promise<ReportTypeItem[]> {
-  const DISASTER_SCOPED_CODES = ["fire", "accident", "red_tape"]
   try {
     const json = await ereportProxy<{ data: { id: string; attributes: { code: string; name: string; sequence: number; is_visible: boolean; is_active: boolean } }[] }>(
       "GET",
@@ -94,8 +111,7 @@ export async function getReportTypes(): Promise<ReportTypeItem[]> {
       is_visible: item.attributes.is_visible,
       is_active: item.attributes.is_active,
     }))
-    const filtered = allTypes.filter((t: ReportTypeItem) => DISASTER_SCOPED_CODES.includes(t.code))
-    return filtered.length > 0 ? filtered : PSA_REPORT_TYPES
+    return allTypes.length > 0 ? allTypes : PSA_REPORT_TYPES
   } catch (err) {
     console.warn("[eReport] Failed to fetch report types, returning disaster-scoped PSA fallback dataset:", err)
     return PSA_REPORT_TYPES
@@ -207,18 +223,44 @@ export async function submitComplaint(payload: SubmitComplaintPayload): Promise<
   try {
     const json = await ereportProxy<SubmitComplaintResponse>("POST", "/submit_complaint", payload)
     if (!json) throw new Error("No response")
+    if (!json.case_number) throw new Error(json.message || "eReport did not return a case number")
     return { ...json, is_live_api: true }
   } catch (err) {
-    console.warn("[eReport] Submit complaint failed, using fallback success response:", err)
+    if (!USE_MOCK) throw err
+    console.warn("[eReport] Submit complaint failed, using explicit mock response:", err)
     return {
       code: 200,
       message: "Complaint submitted successfully to eReport pipeline.",
-      data: {
-        case_number: `HND-${Math.floor(100000 + Math.random() * 900000)}`,
-        id: crypto.randomUUID(),
-        status: "PENDING",
-      },
+      case_number: `HND-${Math.floor(100000 + Math.random() * 900000)}`,
       is_live_api: false,
     }
   }
+}
+
+export async function getReports(reportViewToken: string, page = 1): Promise<ReportsPage> {
+  if (!reportViewToken) throw new Error("Verify your email to view eReport cases")
+  const json = await ereportProxy<{
+    data: { attributes: EReport }[]
+    meta?: { pagination?: { total?: number; current_page?: number; total_pages?: number } }
+  }>("GET", `/reports?page=${page}`, undefined, reportViewToken)
+  if (!json) throw new Error("Unable to load eReport cases")
+  const pagination = json.meta?.pagination
+  return {
+    reports: json.data.map((item) => item.attributes),
+    total: pagination?.total ?? json.data.length,
+    page: pagination?.current_page ?? page,
+    totalPages: pagination?.total_pages ?? 1,
+  }
+}
+
+export async function getReport(caseNumber: string, reportViewToken: string): Promise<EReport> {
+  if (!reportViewToken) throw new Error("Verify your email to view eReport cases")
+  const json = await ereportProxy<{ data: EReport }>(
+    "GET",
+    `/reports/${encodeURIComponent(caseNumber)}`,
+    undefined,
+    reportViewToken,
+  )
+  if (!json?.data) throw new Error("Unable to load eReport case")
+  return json.data
 }
