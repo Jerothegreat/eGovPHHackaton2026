@@ -5,9 +5,9 @@
  * Uses real sample credentials for live-fire integration demonstration.
  *
  * Run:
- *   node --loader ts-node/esm scratch/test-full-pipeline.mjs
+ *   node --loader ts-node/esm scripts/probes/test-full-pipeline.mjs
  *   OR (plain node with built files):
- *   node scratch/test-full-pipeline.mjs
+ *   node scripts/probes/test-full-pipeline.mjs
  */
 
 import 'dotenv/config'

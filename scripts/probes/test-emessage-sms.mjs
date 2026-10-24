@@ -2,8 +2,8 @@
  * Test eMessage Push SMS API — sends a live test SMS!
  *
  * Usage:
- *   node scratch/test-emessage-sms.mjs "+639171234567"
- *   node scratch/test-emessage-sms.mjs "09171234567"
+ *   node scripts/probes/test-emessage-sms.mjs "+639171234567"
+ *   node scripts/probes/test-emessage-sms.mjs "09171234567"
  */
 
 import 'dotenv/config'
@@ -34,8 +34,8 @@ if (!targetNumber) {
 📱 eMessage SMS Test Script
 -------------------------------------------------------------------
 Usage:
-  node scratch/test-emessage-sms.mjs "+639XXXXXXXXX"
-  node scratch/test-emessage-sms.mjs "09XXXXXXXXX"
+  node scripts/probes/test-emessage-sms.mjs "+639XXXXXXXXX"
+  node scripts/probes/test-emessage-sms.mjs "09XXXXXXXXX"
 
 This sends a real SMS via the official eGovPH eMessage gateway.
 ===================================================================

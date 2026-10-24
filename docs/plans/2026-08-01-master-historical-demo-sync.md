@@ -1,7 +1,5 @@
 # Master Historical Demo Sync Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Sync `master` to the worktree's newer historical demo flow so all `historical-*` demo imports, metadata, and consumers build correctly.
 
 **Architecture:** Copy the historical demo data/selector layer from `.worktrees/edge-functions-sync` into `src/features/demo/`, then update `master` consumers to use that shared selector layer instead of mock-only or missing-module behavior. Keep the sync surgical: preserve worktree behavior for the historical path and avoid unrelated refactors.

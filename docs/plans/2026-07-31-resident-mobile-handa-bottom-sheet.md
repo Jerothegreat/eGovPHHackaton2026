@@ -1,7 +1,5 @@
 # Resident Mobile HANDA Bottom Sheet Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Rebuild the resident module into a phone-first eGovPH-style screen that centers HANDA in a persistent draggable bottom sheet and fixes misleading eGov AI translation/chat status handling.
 
 **Architecture:** Keep routing untouched and avoid `src/App.tsx` while that file is being resolved elsewhere. Move resident interaction into a focused mobile layout in `ResidentConsole.tsx`, keep the bottom sheet behavior in a dedicated component, and make `egov-ai-service.ts` return honest source/status metadata so the UI can distinguish live eGov AI from fallback guidance.

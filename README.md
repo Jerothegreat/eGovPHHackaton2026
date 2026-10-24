@@ -268,7 +268,7 @@ When an official publishes an assessment, the publish dispatcher sends a concise
 
 ### Telegram
 
-Publishing also sends a dynamic assessment card to configured Telegram chat IDs. The card contains the verified display area, question list, YES/NO controls, and submit action. `scratch/telegram-bot.mjs` handles callbacks and binds each answer draft to the exact alert message, then sends confirmation summaries and forwards emergency guidance. If live eGov AI is unavailable, the bot uses the same fallback guidance path as the web assistant.
+Publishing also sends a dynamic assessment card to configured Telegram chat IDs. The card contains the verified display area, question list, YES/NO controls, and submit action. `scripts/telegram/telegram-bot.mjs` handles callbacks and binds each answer draft to the exact alert message, then sends confirmation summaries and forwards emergency guidance. If live eGov AI is unavailable, the bot uses the same fallback guidance path as the web assistant.
 
 ## Setup Instructions
 
@@ -323,7 +323,7 @@ Publishing also sends a dynamic assessment card to configured Telegram chat IDs.
 7. To test Telegram notifications, configure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_IDS`, then run the bot in a separate terminal:
 
    ```bash
-   node scratch/telegram-bot.mjs
+   node scripts/telegram/telegram-bot.mjs
    ```
 
 See [Environment Configuration](#environment-configuration) for the complete variable reference and [Verification Commands](#verification-commands) for checks before submitting changes.
@@ -412,7 +412,7 @@ Current demo risks that must be addressed before production:
 src/features/auth/                 SSO, mock identities, roles, and protected routes
 src/features/alerts/               CAP/SMS parsing, thresholds, RDANA drafting, simulator
 src/features/official/             Official assessment and operations console
-src/features/resident/             Resident check-in and eReport experience
+src/features/resident/             Resident check-in and eReport experience (feature components in components/)
 src/features/lgu/                  LGU municipality-scoped dashboard
 src/features/developer/            Developer console and API catalog UI
 src/lib/ereport-service.ts         eReport proxy client and PSA fallback behavior
@@ -421,7 +421,11 @@ src/lib/emessage-sms-service.ts    SMS formatting and Edge Function client
 src/lib/alert-dispatcher.ts        SMS and Telegram publish dispatch
 supabase/functions/egov/            Server-side provider proxy and token handling
 supabase/migrations/                Database schema and demo seed migrations
-scratch/telegram-bot.mjs            Optional local Telegram long-polling bot
+src/components/                     Shared shell and shadcn UI primitives
+src/shared/                         HANDA store, types, and Supabase data access
+scripts/telegram/telegram-bot.mjs   Optional local Telegram long-polling bot
+scripts/probes/                     One-off eGov API probe and smoke scripts
+docs/                               PRD, specs, plans, ADRs, and API references
 docs/eReport-API-Documentation.md  Complete eReport endpoint reference
 ```
 

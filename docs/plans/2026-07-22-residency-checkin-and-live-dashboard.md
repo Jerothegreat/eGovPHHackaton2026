@@ -1,7 +1,5 @@
 # Residency Check-in & Live Barangay Dashboard — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Implement the full HANDA happy path — official creates/publishes campaigns, residents check in with household matching, officials see a live dashboard with realtime updates, status tracking, and CSV export.
 
 **Architecture:** Feature-based layout mirroring the PRD's 7 modules. Two deep pure modules (HouseholdMatcher, DashboardAggregator) in `src/lib/` with vitest unit tests. Supabase direct client access with anon key. Supabase Realtime for live dashboard updates. Inline styles using existing eGov theme tokens (matching existing page patterns).

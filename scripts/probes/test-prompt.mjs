@@ -1,4 +1,4 @@
-import { buildGroundingPrompt } from '../src/features/alerts/rdana-framework.ts'
+import { buildGroundingPrompt } from '../../src/features/alerts/rdana-framework.ts'
 
 console.log('====================================================')
 console.log('TESTING DYNAMIC RDANA PROMPT GENERATION')

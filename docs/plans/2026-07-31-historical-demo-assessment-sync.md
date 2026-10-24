@@ -1,7 +1,5 @@
 # Historical Demo Assessment and LGU Dashboard Sync Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Replace disconnected mock disaster data with one historically grounded demo dataset that powers the Assessment Builder, resident check-ins, LGU Incident Command Dashboard, and eReport defaults together.
 
 **Architecture:** Keep the existing `Campaign`, `CampaignQuestion`, `CheckIn`, and `CheckInAnswer` tables as the operational assessment source of truth. Add a small frontend metadata layer keyed by `campaign.id`, then derive LGU rows and eReport defaults from selectors that join campaign data, check-in aggregates, and historical event metadata.
@@ -861,7 +859,7 @@ git commit -m "feat: finalize historical demo assessment flow"
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-07-31-historical-demo-assessment-sync.md`. Two execution options:
+Plan complete and saved to `docs/plans/2026-07-31-historical-demo-assessment-sync.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 

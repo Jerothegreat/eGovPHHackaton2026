@@ -11,7 +11,7 @@
  *
  * Usage:
  * 1. Get a free bot token from @BotFather on Telegram (takes 30 seconds)
- * 2. Run: $env:TELEGRAM_BOT_TOKEN="your_token_here"; node scratch/telegram-bot.mjs
+ * 2. Run: $env:TELEGRAM_BOT_TOKEN="your_token_here"; node scripts/telegram/telegram-bot.mjs
  *    Or put TELEGRAM_BOT_TOKEN in your .env file!
  */
 
@@ -55,7 +55,7 @@ To run the live Telegram emergency bot:
 3. Copy the HTTP API token provided by BotFather
 4. Run:
    $env:TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
-   node scratch/telegram-bot.mjs
+   node scripts/telegram/telegram-bot.mjs
 ===================================================================
 `)
   process.exit(0)
@@ -118,7 +118,7 @@ async function queryEgovAi(prompt) {
   return `Thank you for contacting eHANDA. During active disaster alerts, please complete your household check-in by replying *HANDA YES YES NO* or tapping the survey buttons below.`
 }
 
-const ACTIVE_CAMPAIGN_FILE = path.join(process.cwd(), 'scratch', 'active-campaign.json')
+const ACTIVE_CAMPAIGN_FILE = path.join(process.cwd(), 'scripts', 'telegram', 'active-campaign.json')
 
 function loadActiveCampaign() {
   try {
@@ -313,7 +313,7 @@ async function handleCallbackQuery(query) {
 import fs from 'fs'
 import path from 'path'
 
-const SUBSCRIBERS_FILE = path.join(process.cwd(), 'scratch', 'telegram-subscribers.json')
+const SUBSCRIBERS_FILE = path.join(process.cwd(), 'scripts', 'telegram', 'telegram-subscribers.json')
 
 function loadSubscribers() {
   try {
