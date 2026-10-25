@@ -1,0 +1,76 @@
+/* Landing page CSS that utilities can't express, from docs/design/board-a.html.
+   Kept in layers so Tailwind utilities still win where both apply. */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .lp :focus-visible {
+    outline: 2px solid var(--t-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    .lp *,
+    .lp *::before,
+    .lp *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+/* App mockups keep the app's own light look in both themes: they stand in for screenshots. */
+@layer components {
+  .lap-screen { background: #0f172a; border-radius: 14px 14px 0 0; padding: 10px 10px 0; }
+  .lap-base { height: 12px; background: linear-gradient(#cbd5e1, #94a3b8); border-radius: 0 0 12px 12px; margin: 0 -4%; }
+  .ph-scr { background: #0f172a; border-radius: 30px; padding: 7px; box-shadow: 0 24px 48px -16px rgb(2 6 23 / .45); }
+  .dark .lap-screen, .dark .ph-scr { outline: 1px solid rgb(255 255 255 / .14); }
+
+  .am { display: flex; background: #f8fafc; border-radius: 6px 6px 0 0; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #0f172a; font-size: 10px; line-height: 1.3; aspect-ratio: 16/10; text-align: left; }
+  .am-side { width: 22%; background: #fff; border-right: 1px solid #e2e8f0; padding: 10px 8px; display: flex; flex-direction: column; gap: 3px; }
+  .am-side b { color: #0646f4; font-size: 12px; margin-bottom: 6px; }
+  .am-side span { padding: 4px 6px; border-radius: 5px; color: #334155; }
+  .am-side .on { background: #eff4ff; color: #0646f4; font-weight: 600; }
+  .am-main { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .am-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .am-top small { display: block; color: #64748b; font-size: 9px; }
+  .am-top strong { font-size: 13px; }
+  .am-btn { background: #0646f4; color: #fff; border-radius: 6px; padding: 4px 8px; font-weight: 600; font-size: 9px; white-space: nowrap; }
+  .am-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .am-tiles div { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px; min-width: 0; }
+  .am-tiles small { color: #64748b; font-size: 8px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .am-tiles b { font-size: 16px; }
+  .am-tiles .r { color: #dc2626; }
+  .am-tiles .w { color: #d97706; }
+  .am-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 6px; flex: 1; min-height: 0; }
+  .am-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0; }
+  .am-card > small { font-weight: 600; color: #334155; font-size: 9px; }
+  .am .bar { display: grid; grid-template-columns: 40px 1fr 10px; align-items: center; gap: 5px; font-size: 8.5px; color: #334155; }
+  .am .bar i { height: 6px; border-radius: 3px; background: #0646f4; display: block; }
+  .am .row { display: grid; grid-template-columns: 1fr auto; gap: 1px 6px; padding: 4px 0; border-top: 1px solid #f1f5f9; font-size: 9px; font-weight: 600; }
+  .am .row span { color: #64748b; font-size: 8px; font-weight: 400; }
+  .am .pill { font-style: normal; font-size: 8px; padding: 1px 6px; border-radius: 999px; font-weight: 600; grid-row: span 2; align-self: center; }
+  .am .p-pend { background: #fffbeb; color: #b45309; }
+  .am .p-acc { background: #eff4ff; color: #0646f4; }
+  .am .p-res { background: #ecfdf5; color: #047857; }
+
+  .pm { background: #fff; border-radius: 24px; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #0f172a; aspect-ratio: 9/18; display: flex; flex-direction: column; text-align: left; }
+  .pm-top { background: #0646f4; color: #fff; padding: 22px 12px 10px; font-size: 11px; font-weight: 700; display: flex; justify-content: space-between; }
+  .pm-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 10px; line-height: 1.35; }
+  .pm-chip { align-self: flex-start; background: #fffbeb; color: #b45309; border-radius: 999px; padding: 2px 8px; font-size: 8.5px; font-weight: 700; }
+  .pm-t { font-size: 10px; color: #475569; }
+  .pm-q { font-size: 14px; font-weight: 700; line-height: 1.25; margin: 0; color: #0f172a; }
+  .pm-en { color: #64748b; margin: 0; }
+  .pm-yes { background: #0646f4; color: #fff; border-radius: 8px; padding: 9px 6px; text-align: center; font-weight: 600; }
+  .pm-no { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 6px; text-align: center; font-weight: 600; }
+}

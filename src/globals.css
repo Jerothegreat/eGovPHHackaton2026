@@ -4,38 +4,90 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --breakpoint-3xl: 120rem;
+}
+
 @theme inline {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--t-fb);
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* eGovPH tokens (docs/standards/design-brief.md) */
+  --color-bg: var(--t-bg);
+  --color-surface: var(--t-surface);
+  --color-ink: var(--t-ink);
+  --color-muted: var(--t-muted);
+  --color-line: var(--t-line);
+  --color-accent: var(--t-accent);
+  --color-accent-hover: var(--t-accent-hover);
+  --color-accent-ink: var(--t-accent-ink);
+  --color-accent-soft: var(--t-accent-soft);
+  --color-signal: var(--t-signal);
+  --color-signal-ink: var(--t-signal-ink);
+  --color-band: var(--t-band);
+  --color-band-ink: var(--t-band-ink);
+  --color-band-muted: var(--t-band-muted);
+  --color-danger: var(--t-danger);
+  --color-good: var(--t-good);
+  --font-display: var(--t-fd);
+  --font-body: var(--t-fb);
 }
 
 :root {
+  /* eGovPH Official tokens, read from e.gov.ph's CSS. Dark values are derived. */
+  --t-bg: #fafcff;
+  --t-surface: #ffffff;
+  --t-ink: #1a1a2e;
+  --t-muted: #606774;
+  --t-line: #e0e9ff;
+  --t-accent: #0040e7;
+  --t-accent-hover: #0035c4;
+  --t-accent-ink: #ffffff;
+  --t-accent-soft: #f0f4ff;
+  --t-signal: #fcd116;
+  --t-signal-ink: #1a1a2e;
+  --t-band: #0040e7;
+  --t-band-ink: #ffffff;
+  --t-band-muted: #dce6ff;
+  --t-danger: #ce1126;
+  --t-good: #047857;
+  --t-fd: 'Lexend', system-ui, sans-serif;
+  --t-fb: 'Lexend', system-ui, sans-serif;
+  --t-shadow: 0 1px 2px rgb(0 64 231 / .06), 0 12px 32px -18px rgb(0 71 171 / .3);
+
+  /* Logo (public/ehanda-wordmark.svg) */
+  --logo-ink: #0040e7;
+  --logo-hblue: #0047ab;
+  --logo-red: #ce1126;
+  --logo-red2: #a80d1f;
+  --logo-yellow: #fcd116;
+
   /* eGovPH Professional Blue Brand Palette */
-  --blue-primary: #0646f4;
-  --blue-hover: #053bce;
-  --blue-deep: #0f3cb5;
-  --blue-soft: #eff4ff;
+  --blue-primary: var(--t-accent);
+  --blue-hover: #0035c4;
+  --blue-deep: #0047ab;
+  --blue-soft: var(--t-accent-soft);
   --blue-subtle: #db8e1a;
 
-  /* Neutral Slate Palette (Supabase-grade contrast) */
-  --ink: #0f172a;            /* Slate 900 */
+  /* Neutral Palette */
+  --ink: var(--t-ink);
   --ink-secondary: #334155;  /* Slate 700 */
-  --muted-text: #64748b;     /* Slate 500 */
+  --muted-text: var(--t-muted);
   --ink-subtle: #94a3b8;     /* Slate 400 */
-  
-  --line: #e2e8f0;           /* Slate 200 */
+
+  --line: var(--t-line);
   --line-strong: #cbd5e1;    /* Slate 300 */
-  --soft-bg: #f8fafc;        /* Slate 50 */
-  --card-bg: #ffffff;
-  
+  --soft-bg: var(--t-bg);
+  --card-bg: var(--t-surface);
+
   /* Status Colors */
   --good: #059669;           /* Emerald 600 */
   --good-bg: #ecfdf5;        /* Emerald 50 */
   --warn: #d97706;           /* Amber 600 */
   --warn-bg: #fffbeb;        /* Amber 50 */
-  --danger: #dc2626;         /* Red 600 */
+  --danger: var(--t-danger);
   --danger-bg: #fef2f2;      /* Red 50 */
-  
+
   /* Shadows */
   --card-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.04);
   --card-shadow-hover: 0 10px 25px -5px rgb(15 23 42 / 0.08), 0 8px 10px -6px rgb(15 23 42 / 0.04);
@@ -77,6 +129,28 @@
   --ring: var(--blue-primary);
 }
 
+/* Dark mode is landing-only: /app never gets the .dark class. */
+.dark {
+  --t-bg: #0b1020;
+  --t-surface: #121a33;
+  --t-ink: #eef2ff;
+  --t-muted: #a3afcb;
+  --t-line: #1f2a4d;
+  --t-accent: #7a9dff;
+  --t-accent-hover: #97b3ff;
+  --t-accent-ink: #0b1020;
+  --t-accent-soft: #16224a;
+  --t-band: #0a2a8a;
+  --t-band-muted: #c3d2ff;
+  --t-danger: #ff6b78;
+  --t-good: #34d399;
+  --logo-ink: #eef2ff;
+  --logo-hblue: #7a9dff;
+  --logo-red: #ef3b4d;
+  --logo-red2: #d42a3c;
+  color-scheme: dark;
+}
+
 @layer base {
   * {
     border-color: var(--line);
@@ -85,7 +159,7 @@
   body {
     background-color: var(--soft-bg);
     color: var(--ink);
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--t-fb);
     letter-spacing: -0.01em;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
@@ -164,12 +238,12 @@
     background-color: var(--blue-primary);
     color: #ffffff;
     border: 1px solid transparent;
-    box-shadow: 0 1px 2px 0 rgb(6 70 244 / 0.2);
+    box-shadow: 0 1px 2px 0 rgb(0 64 231 / 0.2);
   }
 
   .pill-btn.primary:hover, .big-btn.primary:hover {
     background-color: var(--blue-hover);
-    box-shadow: 0 4px 12px 0 rgb(6 70 244 / 0.3);
+    box-shadow: 0 4px 12px 0 rgb(0 64 231 / 0.3);
   }
 
   .pill-btn.ghost, .big-btn.ghost {
@@ -210,7 +284,7 @@
   .input-base:focus {
     outline: none;
     border-color: var(--blue-primary);
-    box-shadow: 0 0 0 3px rgba(6, 70, 244, 0.12);
+    box-shadow: 0 0 0 3px rgba(0, 64, 231, 0.12);
   }
 
   /* Navigation Sidebar */
@@ -447,7 +521,7 @@
   }
 
   .handa-sheet__controls button:focus-visible {
-    outline: 2px solid rgba(6, 70, 244, 0.3);
+    outline: 2px solid rgba(0, 64, 231, 0.3);
     outline-offset: 2px;
   }
 
@@ -643,7 +717,7 @@
     color: #fff;
     font-size: 12px;
     font-weight: 800;
-    box-shadow: 0 12px 24px rgba(6, 70, 244, 0.26);
+    box-shadow: 0 12px 24px rgba(0, 64, 231, 0.26);
   }
 
   .resident-sheet-stack {
@@ -720,7 +794,7 @@
 
   .resident-sheet-question.active {
     border-color: var(--blue-primary);
-    box-shadow: 0 0 0 3px rgba(6, 70, 244, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 64, 231, 0.1);
   }
 
   .resident-sheet-question span {

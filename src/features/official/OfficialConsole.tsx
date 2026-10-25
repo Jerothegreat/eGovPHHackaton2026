@@ -171,7 +171,7 @@ function getNeedCategoryMeta(catKey: string) {
   }
   return {
     label: catKey.charAt(0).toUpperCase() + catKey.slice(1).replace(/_/g, ' '),
-    color: '#0646f4',
+    color: 'var(--blue-primary)',
     bg: '#eff6ff',
     border: '#dbeafe',
     icon: (
@@ -524,7 +524,7 @@ export function OfficialConsole() {
                         width: '42px',
                         height: '42px',
                         background: '#dbeafe',
-                        color: '#0646f4',
+                        color: 'var(--blue-primary)',
                       }}
                     >
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -582,7 +582,7 @@ export function OfficialConsole() {
                     <button
                       className="big-btn primary"
                       style={{
-                        background: '#0646f4',
+                        background: 'var(--blue-primary)',
                         color: '#fff',
                         border: 'none',
                         fontSize: '13px',
@@ -1489,7 +1489,7 @@ export function OfficialConsole() {
                   <button
                     key={q.id}
                     type="button"
-                    className={`w-full text-left flex justify-between items-center gap-3 p-4 rounded-[18px] border ${manualAnswers[q.id] === 'yes' ? 'border-[#0646f4] shadow-[0_0_0_3px_rgba(6,70,244,0.1)]' : ''}`}
+                    className={`w-full text-left flex justify-between items-center gap-3 p-4 rounded-[18px] border ${manualAnswers[q.id] === 'yes' ? 'border-[var(--blue-primary)] shadow-[0_0_0_3px_rgba(0,64,231,0.1)]' : ''}`}
                     style={{ background: '#fff', borderColor: manualAnswers[q.id] === 'yes' ? undefined : '#d8e2f6' }}
                     onClick={() => setManualAnswers(prev => ({ ...prev, [q.id]: prev[q.id] === 'yes' ? 'no' : 'yes' }))}
                   >

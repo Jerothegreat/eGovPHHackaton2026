@@ -1,36 +1,24 @@
-import { SessionProvider, useSession } from '@/features/auth/session-context'
-import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
-import { ResidentConsole } from '@/features/resident/ResidentConsole'
-import { DeveloperConsole } from '@/features/developer/DeveloperConsole'
-import { LguDashboard } from '@/features/lgu/LguDashboard'
-import { OfficialConsole } from '@/features/official/OfficialConsole'
+import { lazy, Suspense } from 'react'
+import { LandingSite } from '@/features/landing/LandingSite'
 
-export default function App() {
-  return (
-    <SessionProvider>
-      <ProtectedRoute>
-        <AppRouter />
-      </ProtectedRoute>
-    </SessionProvider>
-  )
+// The consoles load only under /app, so the landing page ships without them.
+const ConsoleApp = lazy(() => import('./ConsoleApp'))
+
+// eGovPH SSO may return to the site root with ?exchange_code=. Hand it to the app.
+if (window.location.pathname === '/' && new URLSearchParams(window.location.search).has('exchange_code')) {
+  window.history.replaceState(null, '', '/app' + window.location.search + window.location.hash)
 }
 
-function AppRouter() {
-  const { session } = useSession()
+function isAppPath(pathname: string) {
+  return pathname === '/app' || pathname.startsWith('/app/')
+}
 
-  if (!session) return null
-
-  if (session.role === 'developer') {
-    return <DeveloperConsole />
-  }
-
-  if (session.role === 'lgu') {
-    return <LguDashboard />
-  }
-
-  if (session.role === 'resident') {
-    return <ResidentConsole />
-  }
-
-  return <OfficialConsole />
+export default function App() {
+  const { pathname } = window.location
+  if (!isAppPath(pathname)) return <LandingSite pathname={pathname} />
+  return (
+    <Suspense fallback={null}>
+      <ConsoleApp />
+    </Suspense>
+  )
 }

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eHanda viewports</title>
+<style>
+  body { margin: 0; padding: 16px; font: 14px system-ui, sans-serif; background: #e5e7eb; color: #111827; }
+  form { display: flex; gap: 8px; margin-bottom: 16px; }
+  input { flex: 1; padding: 6px 8px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .vp p { margin: 0 0 6px; font-weight: 600; }
+  .box { position: relative; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .2); }
+  iframe { border: 0; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
+</style>
+</head>
+<body>
+<!-- Shows the running build at true CSS widths, scaled down, so wide screens can be checked from a laptop. -->
+<form id="f"><input id="url" value="http://localhost:5173/"><button>Load</button></form>
+<div class="grid" id="grid"></div>
+<script>
+  const SIZES = [[390, 844], [768, 1024], [1280, 800], [1536, 864], [1920, 1080], [2560, 1440], [3440, 1440]];
+  const SCALE_WIDTH = 480;
+  function render(url) {
+    document.getElementById('grid').innerHTML = SIZES.map(([w, h]) => {
+      const s = Math.min(1, SCALE_WIDTH / w);
+      return `<div class="vp"><p>${w} x ${h} (${Math.round(s * 100)}%)</p>
+        <div class="box" style="width:${w * s}px;height:${h * s}px">
+          <iframe src="${url}" style="width:${w}px;height:${h}px;transform:scale(${s})"></iframe></div></div>`;
+    }).join('');
+  }
+  document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); render(document.getElementById('url').value); });
+  render(document.getElementById('url').value);
+</script>
+</body>
+</html>
