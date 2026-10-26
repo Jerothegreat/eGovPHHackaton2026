@@ -54,7 +54,7 @@ export async function requestOTP(email: string): Promise<{ already_verified: boo
 export async function confirmOTP(email: string, otp: string): Promise<boolean> {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 400))
-    return otp === "123456"
+    return otp === "323446"
   }
 
   const token = await getIntegrationToken()
