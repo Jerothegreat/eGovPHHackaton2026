@@ -5,6 +5,8 @@ import type { DashboardRow, CheckInStatus } from './shared'
 import { SessionProvider, useSession } from '@/features/auth/session-context'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { ResidentConsole } from '@/features/resident/ResidentConsole'
+import { AlertSimulator } from '@/features/alerts/AlertSimulator'
+import type { AlertIngestionResult } from '@/features/alerts'
 
 function formatSubmittedBy(submittedBy: string) {
   return submittedBy.includes('(manual)') ? submittedBy : 'Self Report'
@@ -13,7 +15,8 @@ function formatSubmittedBy(submittedBy: string) {
 function OfficialConsole() {
   const { session, logout } = useSession()
   const store = useHandaStore()
-  const { loading, data, createCampaign, saveCampaign, addQuestion, removeQuestion, updateCampaignStatus, updateCaseStatus, submitCheckIn, getDashboard, exportCsv, copyQuestions } = store
+  const { loading, data, createCampaign, saveCampaign, addQuestion, removeQuestion, updateCampaignStatus, updateCaseStatus, submitCheckIn, getDashboard, exportCsv, copyQuestions, addAlert, linkAlertToCampaign } = store
+  const [pendingDraft, setPendingDraft] = useState<AlertIngestionResult | null>(null)
 
   const [name, setName] = useState('')
   const [disasterType, setDisasterType] = useState('Typhoon')
@@ -211,6 +214,91 @@ function OfficialConsole() {
     >
           {sidebarTab === 'dashboard' && (
             <>
+              {/* Layer 1: Alert Simulator (DEV) */}
+              <AlertSimulator
+                barangayCode={profile.barangay_code}
+                onAlertProcessed={async (result: AlertIngestionResult) => {
+                  // Save alert to store
+                  addAlert(result.alert)
+
+                  if (result.draft && result.threshold.auto_draft) {
+                    // Create draft campaign from AI-generated assessment
+                    const campaign = await createCampaign({
+                      name: result.draft.campaign_name,
+                      disaster_type: result.draft.disaster_type,
+                      disaster_date: result.draft.disaster_date,
+                      created_by: 'HANDA-AI',
+                      barangay_code: profile.barangay_code,
+                      alert_id: result.alert.id,
+                      ai_generated: true,
+                    })
+                    if (campaign) {
+                      // Add AI-generated questions to the draft campaign
+                      for (const q of result.draft.questions) {
+                        addQuestion(campaign.id, q.question_text, q.need_category)
+                      }
+                      linkAlertToCampaign(result.alert.id, campaign.id)
+                      setPendingDraft(result)
+                      setEditingCampaignId(campaign.id)
+                      setSelectedCampaignId(campaign.id)
+                    }
+                  }
+                }}
+              />
+
+              {/* Layer 1→2: AI Draft Review Banner */}
+              {pendingDraft && pendingDraft.draft && (() => {
+                const draftCampaign = data.campaigns.find(c => c.ai_generated && c.status === 'draft' && c.alert_id === pendingDraft.alert.id)
+                if (!draftCampaign) return null
+                return (
+                  <div
+                    className="section-card mb-4"
+                    style={{
+                      border: '2px solid #0646f4',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                      padding: '20px',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span style={{ fontSize: '28px', lineHeight: 1 }}>⚠️</span>
+                      <div style={{ flex: 1 }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <strong style={{ fontSize: '15px', color: '#1e3a5f' }}>
+                            PAGASA Alert: {pendingDraft.alert.headline}
+                          </strong>
+                          <span style={{
+                            fontSize: '10px', background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                            color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 700,
+                          }}>
+                            ✨ AI Draft
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '13px', color: '#3b5998', margin: '0 0 12px', lineHeight: 1.5 }}>
+                          An Incident Assessment draft with {pendingDraft.draft.questions.length} RDANA-grounded questions has been auto-generated and is ready for your review.
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            className="big-btn primary"
+                            onClick={() => {
+                              navigate('campaigns')
+                              setPendingDraft(null)
+                            }}
+                          >
+                            Review Draft
+                          </button>
+                          <button
+                            className="big-btn ghost"
+                            onClick={() => setPendingDraft(null)}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
               <div className="dashboard-sticky-head">
                 <div className="dashboard-assessment-control flex items-center gap-3 mb-5">
                   <label htmlFor="campaign-select" className="text-sm font-bold" style={{ color: '#313a4c', whiteSpace: 'nowrap' }}>Assessment:</label>
@@ -236,6 +324,18 @@ function OfficialConsole() {
                           style={selectedCampaign.status === 'draft' ? { background: 'var(--soft)', color: 'var(--muted-text)' } : selectedCampaign.status === 'closed' ? { background: '#fff3cd', color: '#856404' } : undefined}>
                           {selectedCampaign.status}
                         </span>
+                        {selectedCampaign.ai_generated && (
+                          <span style={{
+                            fontSize: '10px',
+                            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                            color: '#fff',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            fontWeight: 700,
+                          }}>
+                            ✨ AI Generated
+                          </span>
+                        )}
                       </div>
                       <p style={{ color: '#556075', lineHeight: 1.45, fontSize: '14px' }}>Barangay {selectedCampaign.barangay_code} — {selectedCampaign.disaster_type}, {selectedCampaign.disaster_date}</p>
                     </div>

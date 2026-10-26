@@ -8,7 +8,7 @@ values (
   '2025-01-15',
   'active',
   'Admin',
-  'BRG-001'
+  '0105503021'
 );
 
 insert into campaign_questions (id, campaign_id, question_text, need_category, display_order)

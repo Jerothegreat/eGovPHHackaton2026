@@ -55,12 +55,13 @@
   --gold: #f2b51d;
   --ink: #202735;
   --muted-text: #667085;
-  --line: #e6ebf5;
+  --line: #eef1f6;
   --soft: #f3f6fd;
   --card-bg: #ffffff;
-  --page-bg: #eef3fb;
+  --page-bg: #f6f8fc;
   --good: #138a4b;
   --warn: #b35a04;
+  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 30px rgba(16, 24, 40, 0.06);
 
   --background: var(--page-bg);
   --foreground: var(--ink);
@@ -94,13 +95,14 @@
   --sidebar-border: var(--line);
   --sidebar-ring: var(--blue);
 
+  /* eGovPH login design tokens (LoginPage.tsx styles against these) */
   --egov-blue: var(--blue);
-  --egov-soft: var(--soft);
-  --egov-radius: var(--radius);
   --egov-ink: var(--ink);
   --egov-muted: var(--muted-text);
   --egov-line: var(--line);
+  --egov-soft: var(--soft);
   --egov-red: var(--red);
+  --egov-radius: var(--radius);
 }
 
 .dark {
@@ -144,6 +146,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
   }
 }
 
@@ -152,6 +155,7 @@
     background: #fff;
     border: 1px solid var(--line);
     border-radius: var(--radius);
+    box-shadow: var(--card-shadow);
   }
 
   .glass-topbar {
@@ -236,6 +240,7 @@
     border: 1px solid var(--line);
     border-radius: 20px;
     overflow: hidden;
+    box-shadow: var(--card-shadow);
   }
 
   .section-card h3 {
@@ -508,8 +513,9 @@
   .form-card {
     border: 1px solid var(--line);
     border-radius: 20px;
-    padding: 18px;
+    padding: 24px;
     background: #fff;
+    box-shadow: var(--card-shadow);
   }
 
   .question-card {

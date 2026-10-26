@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import * as supabaseDb from './supabase'
+import type { Alert } from '@/features/alerts/types'
 
 export type CampaignStatus = 'draft' | 'active' | 'closed' | 'archived'
 export type CheckInStatus = 'unresolved' | 'visited' | 'resolved'
@@ -12,6 +13,8 @@ export type Campaign = {
   status: CampaignStatus
   created_by: string
   barangay_code: string
+  alert_id: string | null
+  ai_generated: boolean
   created_at: string
   updated_at: string
 }
@@ -86,11 +89,14 @@ export type Dashboard = {
   rows: DashboardRow[]
 }
 
+export type { Alert }
+
 export type HandaData = {
   campaigns: Campaign[]
   questions: CampaignQuestion[]
   checkIns: CheckIn[]
   answers: CheckInAnswer[]
+  alerts: Alert[]
 }
 
 const emptyData: HandaData = {
@@ -98,6 +104,7 @@ const emptyData: HandaData = {
   questions: [],
   checkIns: [],
   answers: [],
+  alerts: [],
 }
 
 function formatSubmittedBy(submittedBy: string): string {
@@ -127,7 +134,7 @@ export function useHandaStore() {
     return () => window.clearInterval(intervalId)
   }, [])
 
-  const createCampaign = useCallback(async (input: { name: string; disaster_type: string; disaster_date: string; created_by: string; barangay_code: string }) => {
+  const createCampaign = useCallback(async (input: { name: string; disaster_type: string; disaster_date: string; created_by: string; barangay_code: string; alert_id?: string; ai_generated?: boolean }) => {
     const c: Campaign = {
       id: uid(),
       name: input.name,
@@ -136,6 +143,8 @@ export function useHandaStore() {
       status: 'draft',
       created_by: input.created_by,
       barangay_code: input.barangay_code,
+      alert_id: input.alert_id ?? null,
+      ai_generated: input.ai_generated ?? false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -276,6 +285,18 @@ export function useHandaStore() {
     supabaseDb.insertQuestions(copies)
   }, [data])
 
+  const addAlert = useCallback((alert: Alert) => {
+    setData(d => ({ ...d, alerts: [...d.alerts, alert] }))
+    supabaseDb.insertAlert(alert)
+  }, [])
+
+  const linkAlertToCampaign = useCallback((alertId: string, campaignId: string) => {
+    setData(d => ({
+      ...d,
+      alerts: d.alerts.map(a => a.id === alertId ? { ...a, campaign_id: campaignId } : a),
+    }))
+  }, [])
+
   return {
     loading,
     data,
@@ -289,5 +310,7 @@ export function useHandaStore() {
     getDashboard,
     exportCsv,
     copyQuestions,
+    addAlert,
+    linkAlertToCampaign,
   }
 }

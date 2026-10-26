@@ -8,6 +8,7 @@ import type {
   CampaignStatus,
   CheckInStatus,
 } from './index'
+import type { Alert } from '@/features/alerts/types'
 
 const db = () => supabase
 
@@ -18,11 +19,12 @@ function table(name: string) {
 
 export async function loadAll(): Promise<HandaData | null> {
   if (!db()) return null
-  const [campaigns, questions, checkIns, answers] = await Promise.all([
+  const [campaigns, questions, checkIns, answers, alerts] = await Promise.all([
     table('campaigns').select('*'),
     table('campaign_questions').select('*'),
     table('check_ins').select('*'),
     table('check_in_answers').select('*'),
+    table('alerts').select('*').order('created_at', { ascending: false }),
   ])
   if (campaigns.error) console.error('loadAll campaigns:', campaigns.error)
   return {
@@ -30,6 +32,7 @@ export async function loadAll(): Promise<HandaData | null> {
     questions: (questions.data ?? []) as unknown as CampaignQuestion[],
     checkIns: (checkIns.data ?? []) as unknown as CheckIn[],
     answers: (answers.data ?? []) as unknown as CheckInAnswer[],
+    alerts: (alerts.data ?? []) as unknown as Alert[],
   }
 }
 
@@ -99,4 +102,11 @@ export async function insertAnswersDb(answers: CheckInAnswer[]) {
   if (!db()) return
   const { error } = await table('check_in_answers').insert(answers)
   if (error) console.error('insertAnswersDb:', error)
+}
+
+export async function insertAlert(alert: Alert) {
+  if (!db()) return null
+  const { data, error } = await table('alerts').insert(alert).select().single()
+  if (error) console.error('insertAlert:', error)
+  return error ? null : (data as unknown as Alert)
 }
